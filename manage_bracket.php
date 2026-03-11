@@ -1,0 +1,532 @@
+<?php
+// Move this to the VERY TOP of the file, before any HTML
+include 'connection.php';
+session_start();
+$tournamentID = $_SESSION['tournamentID'];
+
+// Fetch matches grouped by round
+$result = $conn->query("SELECT * FROM tournament_brackets WHERE tournament_id = $tournamentID ORDER BY FIELD(round, 'Round-of-32', 'Round-of-16', 'Quarter-finals', 'Semi-finals', 'Final'), match_number");
+
+$bracket = [];
+while ($row = $result->fetch_assoc()) {
+    $bracket[$row['round']][] = $row;
+}
+// Fetch all teams
+$teams = [];
+$teamName = [];
+$result = $conn->query("SELECT teamID, teamName FROM team WHERE tournament_id = '$tournamentID'");
+while ($row = $result->fetch_assoc()) {
+    $teams[] = $row;
+    $teamName[$row['teamID']] = $row['teamName'];
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knockout Bracket</title>
+  
+  <!-- Linking Google Font Link For Icons -->
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"/>
+  
+  <style>
+        * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Poppins", sans-serif;
+        }
+
+        body {
+        min-height: 100vh;
+        background: #F0F4FF;
+        }
+
+        .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 85px;
+        display: flex;
+        overflow-x: hidden;
+        flex-direction: column;
+        background: #161a2d;
+        padding: 25px 20px;
+        transition: all 0.4s ease;
+        }
+
+        .sidebar:hover {
+        width: 300px;
+        }
+
+        .sidebar .sidebar-header {
+        display: flex;
+        align-items: center;
+        }
+
+        .sidebar .sidebar-header img {
+        width: 42px;
+        border-radius: 50%;
+        }
+
+        .sidebar .sidebar-header h2 {
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: 600;
+        white-space: nowrap;
+        margin-left: 23px;
+        }
+
+        .sidebar-links h4 {
+        color: #fff;
+        font-weight: 500;
+        white-space: nowrap;
+        margin: 10px 0;
+        position: relative;
+        }
+
+        .sidebar-links h4 span {
+        opacity: 0;
+        }
+
+        .sidebar:hover .sidebar-links h4 span {
+        opacity: 1;
+        }
+
+        .sidebar-links .menu-separator {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+        transform: scaleX(1);
+        transform: translateY(-50%);
+        background: #4f52ba;
+        transform-origin: right;
+        transition-delay: 0.2s;
+        }
+
+        .sidebar:hover .sidebar-links .menu-separator {
+        transition-delay: 0s;
+        transform: scaleX(0);
+        }
+
+        .sidebar-links {
+        list-style: none;
+        margin-top: 20px;
+        height: 80%;
+        overflow-y: auto;
+        scrollbar-width: none;
+        }
+
+        .sidebar-links::-webkit-scrollbar {
+        display: none;
+        }
+
+        .sidebar-links li a {
+        display: flex;
+        align-items: center;
+        gap: 0 20px;
+        color: #fff;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 15px 10px;
+        text-decoration: none;
+        transition: 0.2s ease;
+        }
+
+        .sidebar-links li a:hover {
+        color: #161a2d;
+        background: #fff;
+        border-radius: 4px;
+        }
+
+        .user-account {
+        margin-top: auto;
+        padding: 12px 10px;
+        margin-left: -10px;
+        }
+
+        .user-profile {
+        display: flex;
+        align-items: center;
+        color: #161a2d;
+        }
+
+        .user-profile img {
+        width: 42px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        }
+
+        .user-profile h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        }
+
+        .user-profile span {
+        font-size: 2rem;
+        font-weight: 400;
+        }
+
+        .user-detail {
+        margin-left: 23px;
+        white-space: nowrap;
+        }
+
+        .sidebar:hover .user-account {
+        background: #fff;
+        border-radius: 4px;
+        }
+
+        @import url('https://fonts.googleapis.com/css?family=Work+Sans:400,600');
+
+        .container {
+            width: 50%;
+            margin: 0 auto;
+        float: center;
+        }
+
+        header {
+        background: #161a2d;
+        }
+
+        header::after {
+        content: '';
+        display: table;
+        clear: both;
+        }
+
+        .logo {
+        float: center;
+        padding: 10px 0;
+        color: white;
+        }
+        .dashboard {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .card {
+            background: #fff;
+            padding: 50px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
+            color: white;
+        }
+
+        .card h2 {
+            margin: 0;
+            font-size: 2rem;
+            color: #333;
+        }
+
+        .card p {
+            margin: 5px 0 0;
+            color: white;
+        }
+        .table-container {
+        margin-left: 150px;
+        margin-right: 150px;
+        margin-top: 20px;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+        width: 100%;
+        border-collapse: collapse;
+        }
+
+        table th, table td {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        text-align: left;
+        }
+
+        table th {
+        background-color: #161a2d;
+        color: white;
+        }
+
+        table tr:nth-child(even) {
+        background-color: #f9f9f9;
+        }
+
+        table tr:hover {
+        background-color: #f1f1f1;
+        }
+
+        button.btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+        background-color:rgb(13, 76, 170);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        }
+
+        button.btn:hover {
+        background-color:rgb(55, 108, 187);
+        }
+
+        button.btn-sm {
+        padding: 8px 16px;
+        font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+        button.btn {
+            padding: 8px 16px;
+            font-size: 0.875rem;
+        }
+
+        button.btn-sm {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
+        }
+        .bracket {
+            display: flex;
+            gap: 40px;
+            font-family: Arial, sans-serif;
+        }
+        .round {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .match {
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            padding: 10px;
+            min-width: 150px;
+            background-color: #e9f2ff;
+        }
+        .match-title {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+        }
+        .team {
+            padding: 3px 0;
+        }
+        .waiting-message {
+            padding: 5px;
+        }
+
+        .empty {
+            color: #666;
+            color: #999;
+            font-style: italic;
+        }
+        form { display: inline; }
+        select {
+            width: 100%;
+            margin-bottom: 3px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="container">
+      <h1 class="logo">BLACKENED FUTSAL TOURNAMENT MANAGEMENT SYSTEM</h1>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <img src="image/blackened futsal.png" alt="logo" />
+      <h2>BLACKENED FUTSAL</h2>
+    </div>
+    <ul class="sidebar-links">
+      <h4>
+        <span>Main Menu</span>
+        <div class="menu-separator"></div>
+      </h4>
+      <li>
+        <a href="dashboard.php">
+          <span class="material-symbols-outlined"> dashboard </span>Dashboard</a>
+      </li>
+      <li>
+        <a href="listOfTeam.php"><span class="material-symbols-outlined"> groups </span>Participants</a>
+      </li>
+      <li>
+        <a href="schedule.php"><span class="material-symbols-outlined"> calendar_month </span>Schedule</a>
+      </li>
+      <li>
+        <a href="list_match.php"><span class="material-symbols-outlined"> sports_soccer </span>Match Management</a>
+      </li>
+      <li>
+        <a href="standings.php"><span class="material-symbols-outlined"> sports_score </span>Standings</a>
+      </li>
+      <li>
+        <a href="create_bracket.php"><span class="material-symbols-outlined"> flowchart </span>Bracket</a>
+      </li>
+      <li>
+        <a href="tournament_information.php"><span class="material-symbols-outlined"> browse_activity </span>Tournament Information</a>
+      </li>
+      <li>
+        <a href="report.php"><span class="material-symbols-outlined"> monitoring </span>Report</a>
+      </li>
+      <h4>
+        <span>Account</span>
+        <div class="menu-separator"></div>
+      </h4>
+      <li>
+        <a href="profile.php"><span class="material-symbols-outlined"> account_circle </span>Profile</a>
+      </li>
+      <li>
+        <a href="logout.php"><span class="material-symbols-outlined"> logout </span>Logout</a>
+      </li>
+    </ul>
+    <div class="user-account">
+      <div class="user-profile">
+      <span class="material-symbols-outlined"> account_circle </span>
+        <div class="user-detail">
+        <?php
+        include 'connection.php'; 
+        $userID = $_SESSION['userID'];
+        
+
+        $records = mysqli_query($conn, "SELECT * FROM admin WHERE userID='$userID'");
+
+        while($data = mysqli_fetch_array($records))
+        {
+        ?>
+          <h3><?php echo $data['firstName'];  echo " ".$data['lastName'];?></h3>
+          
+          <?php
+            }
+            ?>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="table-container">
+  <a href="delete_all_bracket.php" style="float: right;"><button class="btn btn-sm" style="background-color: Red;">Delete Bracket</button></a>
+  <h2>Knockout Phase</h2><br>
+<div class="bracket">
+<?php foreach ($bracket as $round => $matches): ?>
+    <div class="round">
+    <?php 
+        $round_index = array_search($round, array_keys($bracket));
+        $can_select = ($round_index === 0); // Only first round can be selected initially
+        
+        if ($round_index > 0) {
+            // Check if all previous round matches have winners
+            $prev_round = array_keys($bracket)[$round_index - 1];
+            $prev_matches = $bracket[$prev_round];
+            // Start with true
+            foreach ($prev_matches as $pmatch) {
+                if (empty($pmatch['winner_id'])) {
+                    $all_winners_set = false;
+                    $can_select = $all_winners_set;
+                    break;
+                }
+            }
+            
+        }
+    ?>
+    <h2><?php echo htmlspecialchars($round); ?></h2>
+        <?php foreach ($matches as $match): ?>
+            <div class="match">
+                <div class="match-title">Match <?= $match['match_number'] ?></div>
+                <?php if (!empty($match['team1_id']) && !empty($match['team2_id'])): ?>
+                    <div class="team">
+                        <?php echo isset($teamName[$match['team1_id']]) ? $teamName[$match['team1_id']] : '-'; ?>
+                        <span style="float: right;"><?php echo isset($match['team1_score']) ? $match['team1_score'] : '0'; ?></span>
+                        
+                    </div>
+                    <div class="team">
+                        <?php echo isset($teamName[$match['team2_id']]) ? $teamName[$match['team2_id']] : '-'; ?>
+                        <span style="float: right;"><?php echo isset($match['team2_score']) ? $match['team2_score'] : '0'; ?></span>
+                    </div>
+                    <a href="delete_bracket.php?NAME=<?php echo $match['bracket_id']; ?>" ><button class="btn btn-sm" style="background-color: Red;">Delete</button></a>
+                <?php elseif ($can_select): ?>
+                    <form method="POST" action="update_bracket_list.php">
+                        <select name="team1_id" required>
+                            <option value="">Select Team</option>
+                            <?php foreach ($teams as $team): ?>
+                                <option value="<?= $team['teamID'] ?>"><?= $team['teamName'] ?></option>
+                            <?php endforeach; ?>
+                        </select><br>
+                        <select name="team2_id" required>
+                            <option value="">Select Team</option>
+                            <?php foreach ($teams as $team): ?>
+                                <option value="<?= $team['teamID'] ?>"><?= $team['teamName'] ?></option>
+                            <?php endforeach; ?>
+                        </select><br>
+                        <input type="hidden" name="bracket_id" value="<?= $match['bracket_id'] ?>">
+                        <button type="submit" class="btn btn-sm" style="background-color: MediumSeaGreen;">Save</button>
+                    </form>
+                <?php else: ?>
+                    <?php
+                    // Get the previous round matches that feed into this match
+                    $prev_round = array_keys($bracket)[$round_index - 1];
+                    $prev_matches = $bracket[$prev_round];
+                    $match_index = array_search($match, $matches);
+                    $start_index = $match_index * 2;
+                    $relevant_matches = array_slice($prev_matches, $start_index, 2);
+                    ?>
+                    <div class="waiting-message">
+                        <?php if (!empty($relevant_matches[0]['winner_id'])): ?>
+                            <?php echo isset($teamName[$relevant_matches[0]['winner_id']]) ? $teamName[$relevant_matches[0]['winner_id']] : 'TBD'; ?>
+                        <?php else: ?>
+                            <span class="empty">Winner of Match <?= $relevant_matches[0]['match_number'] ?></span>
+                        <?php endif; ?>
+                        <br>
+                        <?php if (!empty($relevant_matches[1]['winner_id'])): ?>
+                            <?php echo isset($teamName[$relevant_matches[1]['winner_id']]) ? $teamName[$relevant_matches[1]['winner_id']] : 'TBD'; ?>
+                        <?php else: ?>
+                            <span class="empty">Winner of Match <?= $relevant_matches[1]['match_number'] ?></span>
+                        <?php endif; ?>
+                        <?php 
+                        
+                        if (($relevant_matches[0]['winner_id'] != null) && ($relevant_matches[1]['winner_id'] != null)) {
+                            $stmt_update_score = $conn->prepare("UPDATE tournament_brackets SET team1_id = ?, team2_id = ? WHERE bracket_id = ?");
+                            $stmt_update_score->bind_param("iii", $relevant_matches[0]['winner_id'], $relevant_matches[1]['winner_id'], $match['bracket_id']);
+                            $stmt_update_score->execute();
+                            $stmt_update_score->close();
+
+                            $query = "INSERT INTO match_schedule (tournament_id, bracket_id, knockout_round, team1_id, team2_id) 
+                            VALUES (?, ?, ?, ?, ?)"; 
+                                $stmt = $conn->prepare($query);
+                                $stmt->bind_param('iisii', $tournamentID, $match['bracket_id'], $match['round'], $relevant_matches[0]['winner_id'], $relevant_matches[1]['winner_id']);
+                                $stmt->execute();   
+                        }
+                        
+                        ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php endforeach; ?>
+</div>
+
+</body>
+</html>
